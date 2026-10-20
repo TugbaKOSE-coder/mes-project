@@ -33,6 +33,10 @@ class UserLogin(BaseModel):
     username: str
     password: str
 
+class PasswordResetRequest(BaseModel):
+    email: EmailStr
+    new_password: str = Field(..., min_length=4)
+
 class UserResponse(UserBase):
     id: int
     is_active: bool

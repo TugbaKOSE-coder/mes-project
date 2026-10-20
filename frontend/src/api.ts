@@ -87,6 +87,24 @@ export const api = {
     }
   },
 
+  resetPassword: async (email: string, newPassword: string): Promise<{ success: boolean; message?: string; error?: string }> => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/reset-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, new_password: newPassword })
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        return { success: false, error: errData.detail || 'Şifre sıfırlama işlemi başarısız!' };
+      }
+      const data = await res.json();
+      return { success: true, message: data.message };
+    } catch (err: any) {
+      return { success: false, error: 'Sunucuya bağlanılamadı. FastAPI sunucusunun çalıştığından emin olun.' };
+    }
+  },
+
   getMe: async (): Promise<User | null> => {
     const token = getToken();
     if (!token) return null;

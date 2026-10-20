@@ -1,10 +1,11 @@
+from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from database import get_db
 from models import User, UserRole
-from schemas import UserCreate, UserLogin, UserResponse, Token
+from schemas import UserCreate, UserLogin, UserResponse, Token, PasswordResetRequest
 from auth import (
     verify_password, get_password_hash, create_access_token,
     get_current_user, require_roles
@@ -76,3 +77,19 @@ def register_user(user_in: UserCreate, db: Session = Depends(get_db)):
 def read_current_user_profile(current_user: User = Depends(get_current_user)):
     """O an oturum açmış olan kullanıcının bilgilerini döner."""
     return current_user
+
+@router.post("/reset-password", summary="Şifre Sıfırlama (Şifremi Unuttum)")
+def reset_password(req: PasswordResetRequest, db: Session = Depends(get_db)):
+    """Kullanıcının e-posta adresiyle şifresini yenilemesini sağlar."""
+    user = db.query(User).filter(User.email == req.email).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Bu e-posta adresine kayıtlı bir kullanıcı bulunamadı!"
+        )
+    
+    user.hashed_password = get_password_hash(req.new_password)
+    user.updated_at = datetime.utcnow()
+    db.commit()
+    return {"message": "Şifreniz başarıyla güncellendi! Artık yeni şifrenizle giriş yapabilirsiniz."}
+
