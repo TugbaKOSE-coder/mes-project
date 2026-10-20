@@ -4,7 +4,7 @@ from sqlalchemy import func
 from typing import List, Dict, Any
 
 from database import get_db
-from models import WorkOrder, Workstation, ProductionLog, DowntimeReason, QualityInspection, User
+from models import WorkOrder, Workstation, ProductionLog, DowntimeReason, QualityInspection, User, Product
 from auth import get_current_user
 
 router = APIRouter(prefix="/api/analytics", tags=["Verimlilik & OEE Analitiği"])

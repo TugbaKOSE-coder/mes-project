@@ -33,10 +33,45 @@ export const QualityView: React.FC<QualityViewProps> = ({
 
   const selectedOrder = workOrders.find(wo => wo.id === selectedOrderId) || pendingQC[0];
 
-  const [sampleQty, setSampleQty] = useState<number>(20);
-  const [acceptedQty, setAcceptedQty] = useState<number>(19);
-  const [rejectedQty, setRejectedQty] = useState<number>(1);
-  const [defectReason, setDefectReason] = useState<string>('Yüzey çapağı ve mikrometre tolerans sapması');
+  const initialQty = selectedOrder ? (selectedOrder.produced_quantity || selectedOrder.planned_quantity || 0) : 0;
+  const [sampleQty, setSampleQty] = useState<number>(initialQty);
+  const [acceptedQty, setAcceptedQty] = useState<number>(initialQty);
+  const [rejectedQty, setRejectedQty] = useState<number>(0);
+  const [defectReason, setDefectReason] = useState<string>('');
+
+  // Tıklanan / seçilen partiye göre bilgileri dinamik olarak o partiye güncelle
+  React.useEffect(() => {
+    if (selectedOrder) {
+      const qty = selectedOrder.produced_quantity || selectedOrder.planned_quantity || 0;
+      setSampleQty(qty);
+      setAcceptedQty(qty);
+      setRejectedQty(0);
+      setDefectReason('');
+    }
+  }, [selectedOrder?.id]);
+
+  const handleSampleChange = (val: number) => {
+    const num = Math.max(0, val);
+    setSampleQty(num);
+    setAcceptedQty(num);
+    setRejectedQty(0);
+  };
+
+  const handleAcceptedChange = (val: number) => {
+    const num = Math.max(0, val);
+    setAcceptedQty(num);
+    if (sampleQty >= num) {
+      setRejectedQty(sampleQty - num);
+    }
+  };
+
+  const handleRejectedChange = (val: number) => {
+    const num = Math.max(0, val);
+    setRejectedQty(num);
+    if (sampleQty >= num) {
+      setAcceptedQty(sampleQty - num);
+    }
+  };
 
   const handleDecision = (decision: QCDecision) => {
     if (!selectedOrder) return;
@@ -46,7 +81,7 @@ export const QualityView: React.FC<QualityViewProps> = ({
       accepted_quantity: decision === 'APPROVED' ? Number(sampleQty) : Number(acceptedQty),
       rejected_quantity: decision === 'APPROVED' ? 0 : Number(rejectedQty),
       decision,
-      defect_reason: decision === 'REJECTED' ? defectReason : undefined
+      defect_reason: decision === 'REJECTED' ? (defectReason || 'Kalite muayenesi tolerans dışı / ret') : undefined
     });
   };
 
@@ -164,7 +199,7 @@ export const QualityView: React.FC<QualityViewProps> = ({
                     type="number"
                     min="1"
                     value={sampleQty}
-                    onChange={(e) => setSampleQty(Number(e.target.value))}
+                    onChange={(e) => handleSampleChange(Number(e.target.value))}
                     className="input-field"
                   />
                 </div>
@@ -177,7 +212,7 @@ export const QualityView: React.FC<QualityViewProps> = ({
                     type="number"
                     min="0"
                     value={acceptedQty}
-                    onChange={(e) => setAcceptedQty(Number(e.target.value))}
+                    onChange={(e) => handleAcceptedChange(Number(e.target.value))}
                     className="input-field"
                     style={{ borderColor: 'var(--status-running)' }}
                   />
@@ -191,7 +226,7 @@ export const QualityView: React.FC<QualityViewProps> = ({
                     type="number"
                     min="0"
                     value={rejectedQty}
-                    onChange={(e) => setRejectedQty(Number(e.target.value))}
+                    onChange={(e) => handleRejectedChange(Number(e.target.value))}
                     className="input-field"
                     style={{ borderColor: 'var(--status-stopped)' }}
                   />
