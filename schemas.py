@@ -124,8 +124,9 @@ class CustomerResponse(CustomerBase):
 
 class WorkOrderCreate(BaseModel):
     work_order_code: str
-    order_item_id: int
-    product_id: int
+    order_item_id: Optional[int] = None
+    product_id: Optional[int] = None
+    product_name: Optional[str] = None
     workstation_id: Optional[int] = None
     planned_quantity: int = Field(..., gt=0)
     priority: Priority = Priority.MEDIUM
@@ -141,7 +142,7 @@ class WorkOrderStatusUpdate(BaseModel):
 class WorkOrderResponse(BaseModel):
     id: int
     work_order_code: str
-    order_item_id: int
+    order_item_id: Optional[int] = None
     product_id: int
     workstation_id: Optional[int] = None
     planned_quantity: int

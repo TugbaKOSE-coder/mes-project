@@ -8,14 +8,14 @@ from models import Base, User, UserRole, Workstation, WorkstationStatus, Downtim
 
 def init_database():
     print("==================================================")
-    print("🚀 MES VERİTABANI BAŞLATILIYOR...")
-    print(f"Bağlantı Adresi: {engine.url}")
+    print("[*] MES VERITABANI BASLATILIYOR...")
+    print(f"Baglanti Adresi: {engine.url}")
     print("==================================================")
 
     # 1. Modellerdeki tüm tabloları veritabanında fiziksel olarak oluşturur
-    print("\n📦 Tablolar oluşturuluyor...")
+    print("\n[*] Tablolar olusturuluyor...")
     Base.metadata.create_all(bind=engine)
-    print("✅ Tüm tablolar başarıyla oluşturuldu!")
+    print("[OK] Tum tablolar basariyla olusturuldu!")
 
     # 2. Örnek Başlangıç Verilerini (Seed Data) Ekleyelim
     db = SessionLocal()
@@ -23,7 +23,7 @@ def init_database():
         # Eğer hiç kullanıcı yoksa varsayılan Yöneticiyi ekle
         admin_user = db.query(User).filter(User.username == "admin").first()
         if not admin_user:
-            print("\n👤 Varsayılan yönetici kullanıcısı ekleniyor (admin)...")
+            print("\n[*] Varsayilan yonetici kullanicisi ekleniyor (admin)...")
             from auth import get_password_hash
             admin = User(
                 username="admin",
@@ -37,7 +37,7 @@ def init_database():
 
         # Örnek İstasyonlar Ekleyelim
         if db.query(Workstation).count() == 0:
-            print("🏭 Örnek makineler/istasyonlar ekleniyor...")
+            print("[*] Ornek makineler/istasyonlar ekleniyor...")
             stations = [
                 Workstation(code="ST-01", name="CNC Kesim İstasyonu", station_type="Kesim", capacity_per_hour=30, status=WorkstationStatus.IDLE),
                 Workstation(code="ST-02", name="Robotik Kaynak İstasyonu", station_type="Kaynak", capacity_per_hour=25, status=WorkstationStatus.IDLE),
@@ -48,7 +48,7 @@ def init_database():
 
         # Örnek Duruş Nedenleri Ekleyelim
         if db.query(DowntimeReason).count() == 0:
-            print("⚠️ Örnek duruş nedenleri ekleniyor...")
+            print("[*] Ornek durus nedenleri ekleniyor...")
             reasons = [
                 DowntimeReason(code="D-01", name="Mekanik Arıza", category=DowntimeCategory.MECHANICAL, description="Makine bıçak veya motor arızası"),
                 DowntimeReason(code="D-02", name="Elektrik / Sensör Arızası", category=DowntimeCategory.ELECTRICAL, description="Sensör okuma hatası veya enerji kesintisi"),
@@ -58,8 +58,8 @@ def init_database():
             db.add_all(reasons)
 
         db.commit()
-        print("\n🎉 BAŞARILI: Başlangıç verileri veritabanına kaydedildi!")
-        print("Artık sistem tabloları ve örnek verileri hazır.\n")
+        print("\n[OK] Baslangic verileri veritabanina kaydedildi!")
+        print("Artik sistem tablolari ve ornek verileri hazir.\n")
 
     except Exception as e:
         db.rollback()

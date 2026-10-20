@@ -182,7 +182,7 @@ class WorkOrder(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     work_order_code = Column(String(50), unique=True, nullable=False, index=True)
-    order_item_id = Column(Integer, ForeignKey("order_items.id"), nullable=False)
+    order_item_id = Column(Integer, ForeignKey("order_items.id"), nullable=True)
     product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
     workstation_id = Column(Integer, ForeignKey("workstations.id"), index=True)
     

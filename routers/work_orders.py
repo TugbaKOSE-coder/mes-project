@@ -72,10 +72,26 @@ def create_work_order(
     # Başlangıç durumu istasyon atanmışsa PLANNED, atanmamışsa PENDING
     initial_status = WorkOrderStatus.PLANNED if wo_in.workstation_id else WorkOrderStatus.PENDING
 
+    # Dinamik Ürün Çözümleme veya Yeni Ürün Oluşturma
+    product_id = wo_in.product_id
+    if not product_id:
+        prod_name = wo_in.product_name or "Standart Üretim Parçası"
+        product = db.query(Product).filter(Product.name == prod_name).first()
+        if not product:
+            product = Product(
+                code=f"PRD-{int(datetime.utcnow().timestamp()) % 100000}",
+                name=prod_name,
+                unit="ADET",
+                standard_cycle_time_sec=60
+            )
+            db.add(product)
+            db.flush()
+        product_id = product.id
+
     new_wo = WorkOrder(
         work_order_code=wo_in.work_order_code,
         order_item_id=wo_in.order_item_id,
-        product_id=wo_in.product_id,
+        product_id=product_id,
         workstation_id=wo_in.workstation_id,
         planned_quantity=wo_in.planned_quantity,
         priority=wo_in.priority,

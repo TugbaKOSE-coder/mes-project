@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import auth, workstations, work_orders, production, quality
+from routers import auth, workstations, work_orders, production, quality, products
 
 # ==============================================================================
 # FASTAPI UYGULAMASI VE SWAGGER YAPILANDIRMASI
@@ -43,6 +43,7 @@ app.include_router(workstations.router)
 app.include_router(work_orders.router)
 app.include_router(production.router)
 app.include_router(quality.router)
+app.include_router(products.router)
 
 @app.get("/", tags=["Sistem"])
 def root():

@@ -6,9 +6,10 @@ import { WorkOrdersView } from './components/WorkOrdersView';
 import { OperatorView } from './components/OperatorView';
 import { QualityView } from './components/QualityView';
 import { AnalyticsView } from './components/AnalyticsView';
+import { AuthView } from './components/AuthView';
 
 import {
-  UserRole,
+  User,
   Workstation,
   WorkOrder,
   DowntimeReason,
@@ -16,10 +17,10 @@ import {
   WorkOrderStatus,
   QCDecision
 } from './types';
-import { api, getCurrentUserRole, setCurrentUserRole } from './api';
+import { api, getStoredUser } from './api';
 
 export function App() {
-  const [currentRole, setRole] = useState<UserRole>((getCurrentUserRole() as UserRole) || 'ADMIN');
+  const [currentUser, setCurrentUser] = useState<User | null>(getStoredUser());
   const [activeTab, setActiveTab] = useState<string>('dashboard');
 
   const [workstations, setWorkstations] = useState<Workstation[]>([]);
@@ -34,50 +35,82 @@ export function App() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // 1. Initial Load
+  // 1. Dinamik Veri Yükleme (Tamamen FastAPI Backend ve DB'den)
   const loadData = async () => {
-    const [stations, orders, reasons] = await Promise.all([
-      api.getWorkstations(),
-      api.getWorkOrders(),
-      api.getDowntimeReasons()
-    ]);
-    setWorkstations(stations);
-    setWorkOrders(orders);
-    setDowntimeReasons(reasons);
+    if (!currentUser) return;
+    try {
+      const [stations, orders, reasons] = await Promise.all([
+        api.getWorkstations(),
+        api.getWorkOrders(),
+        api.getDowntimeReasons()
+      ]);
+      setWorkstations(stations || []);
+      setWorkOrders(orders || []);
+      setDowntimeReasons(reasons || []);
+    } catch (err) {
+      console.error('Data load error:', err);
+    }
   };
 
+  // Check login on startup
   useEffect(() => {
-    loadData();
-    // Auto-poll telemetry every 10 seconds for real-time feel
-    const interval = setInterval(loadData, 10000);
-    return () => clearInterval(interval);
+    const checkAuth = async () => {
+      const user = await api.getMe();
+      if (user) {
+        setCurrentUser(user);
+        if (user.role === 'OPERATOR') setActiveTab('operator');
+        else if (user.role === 'QC') setActiveTab('quality');
+      }
+    };
+    checkAuth();
   }, []);
 
-  const handleRoleChange = (role: UserRole) => {
-    setRole(role);
-    setCurrentUserRole(role);
-    showToast(`Rol değiştirildi: ${role}`);
-    if (role === 'OPERATOR') setActiveTab('operator');
-    else if (role === 'QC') setActiveTab('quality');
+  useEffect(() => {
+    if (currentUser) {
+      loadData();
+      const interval = setInterval(loadData, 5000); // 5 saniyede bir canlı telemetri çek
+      return () => clearInterval(interval);
+    }
+  }, [currentUser]);
+
+  // Oturum İşlemleri
+  const handleLoginSuccess = (user: User) => {
+    setCurrentUser(user);
+    showToast(`Hoş geldiniz, ${user.full_name || user.username}!`);
+    if (user.role === 'OPERATOR') setActiveTab('operator');
+    else if (user.role === 'QC') setActiveTab('quality');
+    else setActiveTab('dashboard');
   };
 
-  // 2. Machine & Order Status Handlers
+  const handleLogout = () => {
+    api.logout();
+    setCurrentUser(null);
+    showToast('Oturum kapatıldı.');
+  };
+
+  // 2. Makine ve İş Emri Durum Güncelleme
   const handleUpdateStationStatus = async (stationId: number, status: WorkstationStatus) => {
-    await api.updateWorkstationStatus(stationId, status);
-    await loadData();
-    showToast(`Makine durumu güncellendi: ${status}`);
+    const res = await api.updateWorkstationStatus(stationId, status);
+    if (res) {
+      await loadData();
+      showToast(`Makine durumu güncellendi: ${status}`);
+    }
   };
 
   const handleUpdateOrderStatus = async (orderId: number, status: WorkOrderStatus, notes?: string) => {
-    await api.updateWorkOrderStatus(orderId, status, notes);
-    await loadData();
-    showToast(`İş emri durumu: ${status}`);
+    const res = await api.updateWorkOrderStatus(orderId, status, notes);
+    if (res) {
+      await loadData();
+      showToast(`İş emri durumu: ${status}`);
+    }
   };
 
-  const handleCreateWorkOrder = async (newOrder: Partial<WorkOrder>) => {
-    await api.createWorkOrder(newOrder);
-    await loadData();
-    showToast(`Yeni iş emri oluşturuldu: ${newOrder.work_order_code}`);
+  const handleCreateWorkOrder = async (newOrder: Partial<WorkOrder> & { product_name?: string }) => {
+    const res = await api.createWorkOrder(newOrder);
+    if (res) {
+      await loadData();
+      showToast(`Yeni iş emri veritabanına kaydedildi: ${newOrder.work_order_code}`);
+    }
   };
 
   const handleLogProduction = async (logData: {
@@ -122,40 +155,25 @@ export function App() {
     setActiveTab('operator');
   };
 
-  // Simulation Tick for presentation "Wow" effect
-  const handleSimulateTick = () => {
-    // Increment active work order on running stations
-    const runningStation = workstations.find(w => w.status === 'RUNNING');
-    if (runningStation) {
-      const activeWO = workOrders.find(wo => wo.workstation_id === runningStation.id);
-      if (activeWO) {
-        handleLogProduction({
-          work_order_id: activeWO.id,
-          workstation_id: runningStation.id,
-          produced_quantity: 3,
-          scrap_quantity: 0,
-          downtime_minutes: 0
-        });
-        showToast(`⚡ Simülasyon: [${runningStation.code}] tezgahında 3 parça daha üretildi!`);
-      }
-    } else {
-      showToast('Simülasyon için en az 1 istasyonun çalışıyor (RUNNING) olması gerekir.');
-    }
-  };
-
   const activeStationsCount = workstations.filter(w => w.status === 'RUNNING').length;
   const stoppedStationsCount = workstations.filter(w => w.status === 'STOPPED').length;
   const qcPendingCount = workOrders.filter(wo => wo.status === 'QUALITY_CHECK').length;
 
+  // EĞER KULLANICI GİRİŞ YAPMAMIŞSA -> LOGIN / KAYIT SAYFASINI GÖSTER
+  if (!currentUser) {
+    return <AuthView onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  // GİRİŞ YAPILMIŞSA -> ANA MES PLATFORMU
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       {/* Top Telemetry Navigation */}
       <Navbar
-        currentRole={currentRole}
-        onRoleChange={handleRoleChange}
+        currentUser={currentUser}
+        onLogout={handleLogout}
         activeStationsCount={activeStationsCount}
         stoppedStationsCount={stoppedStationsCount}
-        onSimulateTick={handleSimulateTick}
+        onSimulateTick={loadData}
       />
 
       {/* Main Body */}
@@ -164,7 +182,7 @@ export function App() {
         <Sidebar
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          currentRole={currentRole}
+          currentRole={currentUser.role}
           qcPendingCount={qcPendingCount}
         />
 
