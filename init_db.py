@@ -27,7 +27,7 @@ def init_database():
             from auth import get_password_hash
             admin = User(
                 username="admin",
-                email="admin@mes.local",
+                email="admin@mes.com",
                 hashed_password=get_password_hash("admin123"),
                 full_name="Sistem Yöneticisi",
                 role=UserRole.ADMIN,

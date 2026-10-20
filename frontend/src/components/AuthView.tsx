@@ -16,8 +16,8 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess }) => {
   const [authMode, setAuthMode] = useState<AuthMode>('login');
 
   // Login form state
-  const [loginUsername, setLoginUsername] = useState('admin');
-  const [loginPassword, setLoginPassword] = useState('admin123');
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
 
   // Register form state
   const [regFullName, setRegFullName] = useState('');
@@ -305,25 +305,6 @@ export const AuthView: React.FC<AuthViewProps> = ({ onLoginSuccess }) => {
             >
               {loading ? 'Giriş Yapılıyor...' : 'Sisteme Giriş Yap'}
             </button>
-
-            {/* Quick Demo Login Pill */}
-            <div style={{ borderTop: '1px solid var(--border-subtle)', paddingTop: '16px', marginTop: '4px' }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', textAlign: 'center', marginBottom: '8px' }}>
-                Hızlı Test İçin Varsayılan Yönetici:
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setLoginUsername('admin');
-                  setLoginPassword('admin123');
-                  handleLogin();
-                }}
-                className="btn btn-secondary"
-                style={{ width: '100%', padding: '8px', fontSize: '0.78rem' }}
-              >
-                👑 Tek Tıkla Admin Olarak Gir (admin / admin123)
-              </button>
-            </div>
           </form>
         )}
 

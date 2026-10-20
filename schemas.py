@@ -22,7 +22,7 @@ class TokenData(BaseModel):
 
 class UserBase(BaseModel):
     username: str
-    email: EmailStr
+    email: str
     full_name: str
     role: UserRole = UserRole.OPERATOR
 
@@ -34,7 +34,7 @@ class UserLogin(BaseModel):
     password: str
 
 class PasswordResetRequest(BaseModel):
-    email: EmailStr
+    email: str
     new_password: str = Field(..., min_length=4)
 
 class UserResponse(UserBase):
@@ -108,7 +108,7 @@ class CustomerBase(BaseModel):
     code: str
     name: str
     contact_person: Optional[str] = None
-    email: Optional[EmailStr] = None
+    email: Optional[str] = None
     phone: Optional[str] = None
     address: Optional[str] = None
 
