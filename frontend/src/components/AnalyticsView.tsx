@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
   FileSpreadsheet,
-  FileText,
   AlertTriangle,
   Award,
   CheckCircle2
@@ -41,15 +40,65 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ workOrders, workst
     return () => clearInterval(timer);
   }, []);
 
-  const handleExportPDF = () => {
-    alert("📄 Üretim ve Duruş Raporu PDF formatında hazırlandı ve indiriliyor...");
-  };
+  const colors = ['#F43F5E', '#FB923C', '#38BDF8', '#94A3B8', '#A855F7', '#10B981'];
 
   const handleExportExcel = () => {
-    alert("📊 Fabrika Vardiya ve İş Emri Verileri Excel (.xlsx) formatında dışa aktarıldı!");
-  };
+    const timestamp = new Date().toLocaleString('tr-TR');
+    const rows = [
+      ['MES.CORE - URETIM VE OEE ANALITIK RAPORU'],
+      [`Rapor Tarihi: ${timestamp}`],
+      [''],
+      ['--- 1. GENEL EKIPMAN VERIMLILIGI (OEE) METRIKLERI ---'],
+      ['Metrik', 'Deger', 'Detay / Aciklama'],
+      ['Genel OEE Orani', `%${metrics.oee_rate}`, 'Availability x Performance x Quality'],
+      ['Kullanilabilirlik (Availability)', `%${metrics.availability_rate}`, `Planlanan: ${metrics.shift_planned_minutes} dk | Durus Kaybi: ${metrics.total_downtime_minutes} dk`],
+      ['Performans (Performance)', `%${metrics.performance_rate}`, `Standart Cevrim: ${metrics.standard_cycle_sec || 60} sn | Gerceklesen: ${metrics.actual_cycle_sec > 0 ? metrics.actual_cycle_sec + ' sn' : metrics.total_produced + ' Adet'}`],
+      ['Kalite Orani (Quality)', `%${metrics.quality_rate}`, `Saglam: ${metrics.total_produced} Adet | Fire/Hurda: ${metrics.total_scrapped} Adet`],
+      ['Toplam Planlanan Uretim', `${metrics.total_planned} Adet`, 'Tum is emirleri toplami'],
+      ['Toplam Gerceklesen Uretim', `${metrics.total_produced} Adet`, 'Saglam uretilen parca'],
+      ['Toplam Fire / Hurda', `${metrics.total_scrapped} Adet`, 'Kalite veya istasyon firesi'],
+      ['Toplam Durus Kaybi', `${metrics.total_downtime_minutes} dk`, 'Uretim kayip suresi'],
+      [''],
+      ['--- 2. EN SIK YASANAN DURUS NEDENLERI (PARETO ANALIZI) ---'],
+      ['Durus Nedeni', 'Durus Suresi (dk)', 'Pay / Yuzde (%)'],
+      ...(metrics.downtime_pareto.length > 0
+        ? metrics.downtime_pareto.map(item => [item.reason, `${item.minutes} dk`, `%${item.percent}`])
+        : [['Durus kaydi bulunmuyor', '0 dk', '%0']]),
+      [''],
+      ['--- 3. ISTASYON KAPASITE VE ANLIK DURUMLARI ---'],
+      ['Istasyon Kodu', 'Istasyon Adi', 'Istasyon Tipi', 'Kapasite (Ad/Saat)', 'Durum'],
+      ...workstations.map(st => [
+        st.code,
+        st.name,
+        st.station_type || 'Genel',
+        `${st.capacity_per_hour} ad/saat`,
+        st.status === 'RUNNING' ? 'Calisiyor' : st.status === 'STOPPED' ? 'Durusta' : 'Bosta'
+      ]),
+      [''],
+      ['--- 4. IS EMIRLERI VE URETIM DURUMLARI ---'],
+      ['Is Emri Kodu', 'Urun', 'Istasyon', 'Planlanan', 'Uretilen', 'Fire', 'Durum'],
+      ...workOrders.map(wo => [
+        wo.work_order_code,
+        wo.product?.name || 'Urun',
+        wo.workstation?.name || '-',
+        String(wo.planned_quantity),
+        String(wo.produced_quantity),
+        String(wo.scrapped_quantity),
+        wo.status
+      ])
+    ];
 
-  const colors = ['#F43F5E', '#FB923C', '#38BDF8', '#94A3B8', '#A855F7', '#10B981'];
+    const csvContent = rows.map(e => e.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(';')).join('\r\n');
+    const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `MES_OEE_Raporu_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }} className="animate-fade-in">
@@ -62,14 +111,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ workOrders, workst
           </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button onClick={handleExportExcel} className="btn btn-secondary" style={{ padding: '8px 14px', fontSize: '0.82rem' }}>
-            <FileSpreadsheet size={16} color="var(--status-running)" />
+        <div>
+          <button onClick={handleExportExcel} className="btn btn-primary" style={{ padding: '9px 16px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <FileSpreadsheet size={18} color="#10B981" />
             <span>Excel Dışa Aktar</span>
-          </button>
-          <button onClick={handleExportPDF} className="btn btn-primary" style={{ padding: '8px 14px', fontSize: '0.82rem' }}>
-            <FileText size={16} />
-            <span>PDF Rapor İndir</span>
           </button>
         </div>
       </div>
