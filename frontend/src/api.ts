@@ -235,5 +235,44 @@ export const api = {
       console.error('Downtime reasons error:', err);
     }
     return [];
+  },
+
+  // 7. Gerçek Zamanlı Dinamik OEE ve Duruş Analitiği (Veritabanından)
+  getOeeMetrics: async (): Promise<OeeMetrics> => {
+    try {
+      const res = await fetch(`${API_BASE}/analytics/oee`, { headers: authHeaders() });
+      if (res.ok) return await res.json();
+    } catch (err) {
+      console.error('OEE metrics fetch error:', err);
+    }
+    return {
+      availability_rate: 0,
+      performance_rate: 0,
+      quality_rate: 0,
+      oee_rate: 0,
+      shift_planned_minutes: 0,
+      total_downtime_minutes: 0,
+      total_planned: 0,
+      total_produced: 0,
+      total_scrapped: 0,
+      standard_cycle_sec: 60,
+      actual_cycle_sec: 0,
+      downtime_pareto: []
+    };
   }
 };
+
+export interface OeeMetrics {
+  availability_rate: number;
+  performance_rate: number;
+  quality_rate: number;
+  oee_rate: number;
+  shift_planned_minutes: number;
+  total_downtime_minutes: number;
+  total_planned: number;
+  total_produced: number;
+  total_scrapped: number;
+  standard_cycle_sec: number;
+  actual_cycle_sec: number;
+  downtime_pareto: Array<{ reason: string; minutes: number; percent: number }>;
+}

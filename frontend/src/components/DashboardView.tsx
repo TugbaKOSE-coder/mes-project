@@ -1,18 +1,15 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Activity,
   AlertTriangle,
-  CheckCircle,
-  Clock,
   TrendingUp,
   Cpu,
   Play,
   Pause,
-  ArrowRight,
   Flame,
   Percent
 } from 'lucide-react';
 import { Workstation, WorkOrder, WorkstationStatus } from '../types';
+import { api, OeeMetrics } from '../api';
 
 interface DashboardViewProps {
   workstations: Workstation[];
@@ -27,7 +24,32 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenOperatorForStation,
   onUpdateStationStatus
 }) => {
-  // KPI Calculations
+  const [metrics, setMetrics] = useState<OeeMetrics>({
+    availability_rate: 0,
+    performance_rate: 0,
+    quality_rate: 0,
+    oee_rate: 0,
+    shift_planned_minutes: 0,
+    total_downtime_minutes: 0,
+    total_planned: 0,
+    total_produced: 0,
+    total_scrapped: 0,
+    standard_cycle_sec: 60,
+    actual_cycle_sec: 0,
+    downtime_pareto: []
+  });
+
+  useEffect(() => {
+    const fetchOee = async () => {
+      const data = await api.getOeeMetrics();
+      setMetrics(data);
+    };
+    fetchOee();
+    const interval = setInterval(fetchOee, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // KPI Calculations (100% Dynamic from DB)
   const totalPlanned = workOrders.reduce((acc, wo) => acc + wo.planned_quantity, 0);
   const totalProduced = workOrders.reduce((acc, wo) => acc + wo.produced_quantity, 0);
   const totalScrapped = workOrders.reduce((acc, wo) => acc + wo.scrapped_quantity, 0);
@@ -102,7 +124,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
 
-        {/* KPI 2: OEE */}
+        {/* KPI 2: OEE (100% Dynamic from DB) */}
         <div className="glass-card" style={{ padding: '20px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
@@ -110,7 +132,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 OEE (EKİPMAN VERİMLİLİĞİ)
               </div>
               <div style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--status-running)', marginTop: '4px' }}>
-                %88.4
+                %{metrics.oee_rate}
               </div>
             </div>
             <div style={{
@@ -123,9 +145,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </div>
           </div>
           <div style={{ display: 'flex', gap: '8px', fontSize: '0.72rem', marginTop: '14px', color: 'var(--text-secondary)' }}>
-            <span style={{ color: 'var(--status-running)' }}>✓ Kullanılabilirlik: %91</span>
+            <span style={{ color: 'var(--status-running)' }}>✓ Kullanılabilirlik: %{metrics.availability_rate}</span>
             <span>•</span>
-            <span>Performans: %97</span>
+            <span>Performans: %{metrics.performance_rate}</span>
           </div>
         </div>
 
